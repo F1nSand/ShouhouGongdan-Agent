@@ -1,0 +1,30 @@
+app:
+  ai:
+    provider: dashscope
+  embedding:
+    model: ${EMBEDDING_MODEL:text-embedding-v3}
+  security:
+    jwt-secret: ${JWT_SECRET}
+  knowledge:
+    worker-enabled: true
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_APP_USERNAME}
+    password: ${DB_APP_PASSWORD}
+  flyway:
+    url: ${DB_MIGRATION_URL:${DB_URL}}
+    user: ${DB_MIGRATION_USERNAME}
+    password: ${DB_MIGRATION_PASSWORD}
+  ai:
+    model:
+      chat: dashscope
+      embedding: dashscope
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY}
+      base-url: ${DASHSCOPE_BASE_URL:https://dashscope.aliyuncs.com}
+      embedding:
+        options:
+          model: ${EMBEDDING_MODEL:text-embedding-v3}
+          dimensions: ${EMBEDDING_DIMENSIONS:1024}
+          text-type: document

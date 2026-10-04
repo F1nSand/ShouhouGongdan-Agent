@@ -14,7 +14,10 @@ public class McpConfiguration {
     public McpSyncHttpClientRequestCustomizer mcpSyncHttpClientRequestCustomizer() {
 
         Map<String,String> headers = new HashMap<>();
-        headers.put("Authorization", "Bearer sk-057910f507c8400f995663e8100cb59a");
+        String token = System.getenv("MCP_AUTH_TOKEN");
+        if (token != null && !token.isBlank()) {
+            headers.put("Authorization", "Bearer " + token);
+        }
         return new HeaderSyncHttpRequestCustomizer(headers);
     }
 }

@@ -1,0 +1,20 @@
+{
+  "startedAt": "2026-09-28T08:38:29.879Z",
+  "finishedAt": "2026-09-28T08:38:30.526Z",
+  "endpoint": "/api/v1/orders?orderNo=<synthetic-order>",
+  "workload": {
+    "warmupCount": 100,
+    "sampleCount": 200,
+    "concurrency": 10
+  },
+  "response": {
+    "p50Ms": 19.93,
+    "p95Ms": 72.41,
+    "maxMs": 82.08,
+    "meanMs": 29.22,
+    "errorCount": 0,
+    "statusCounts": {
+      "200": 200
+    }
+  }
+}

@@ -1,0 +1,146 @@
+name: aftersales-local-demo
+
+services:
+  postgres:
+    image: aftersales-local-demo/postgres:local
+    pull_policy: never
+    restart: unless-stopped
+    mem_limit: 1536m
+    cpus: 1.5
+    pids_limit: 256
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DB_APP_USERNAME: ${DB_APP_USERNAME:?set DB_APP_USERNAME in .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?run scripts/New-LocalEnv.ps1}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/01-create-runtime-role.sh:/docker-entrypoint-initdb.d/01-create-runtime-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks:
+      - demo
+    labels:
+      com.aftersales.demo: "true"
+
+  redis:
+    image: aftersales-local-demo/redis:local
+    pull_policy: never
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - demo
+    labels:
+      com.aftersales.demo: "true"
+
+  backend:
+    image: aftersales-local-demo/backend:local
+    pull_policy: never
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    mem_limit: 1024m
+    cpus: 2.0
+    pids_limit: 512
+    environment:
+      SPRING_PROFILES_ACTIVE: mock
+      SERVER_PORT: 8081
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+      DB_APP_USERNAME: ${DB_APP_USERNAME:?set DB_APP_USERNAME in .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DB_MIGRATION_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+      DB_MIGRATION_USERNAME: ${DB_MIGRATION_USERNAME:?set DB_MIGRATION_USERNAME in .env}
+      DB_MIGRATION_PASSWORD: ${DB_MIGRATION_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      SPRING_DATA_REDIS_HOST: redis
+      EMBEDDING_DIMENSIONS: 1024
+      APP_KNOWLEDGE_MINIMUM_SIMILARITY: "0.08"
+      DEEPSEEK_API_KEY: ""
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_CHAT_MODEL: ${DEEPSEEK_CHAT_MODEL:-deepseek-flash}
+      SILICONFLOW_API_KEY: ""
+      SILICONFLOW_BASE_URL: ${SILICONFLOW_BASE_URL:-https://api.siliconflow.cn}
+      SILICONFLOW_EMBEDDING_MODEL: ${SILICONFLOW_EMBEDDING_MODEL:-Qwen/Qwen3-Embedding-0.6B}
+      MODEL_REQUEST_BUDGET_ENABLED: "true"
+      MODEL_REQUEST_BUDGET_MAX_ATTEMPTS: "50"
+      MODEL_REQUEST_BUDGET_MODE: daily
+      MODEL_REQUEST_BUDGET_DAILY_TIME_ZONE: Asia/Shanghai
+      REFUND_MODE: local-demo
+      JWT_SECRET: ${JWT_SECRET:?run scripts/New-LocalEnv.ps1}
+      POLICY_STORAGE_DIR: /data/policies
+      DEMO_SEED_ENABLED: "true"
+      DEMO_CSR_PASSWORD: ${DEMO_CSR_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DEMO_SUPERVISOR_PASSWORD: ${DEMO_SUPERVISOR_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DEMO_WAREHOUSE_PASSWORD: ${DEMO_WAREHOUSE_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:?run scripts/New-LocalEnv.ps1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - policy-data:/data/policies
+    healthcheck:
+      # The official Temurin JRE image includes bash. This TCP probe gates web startup;
+      # start.ps1 also checks the unauthenticated Spring readiness endpoint internally.
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8081'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 45s
+    networks:
+      - demo
+    labels:
+      com.aftersales.demo: "true"
+
+  web:
+    image: aftersales-local-demo/web:local
+    pull_policy: never
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 128
+    ports:
+      - "127.0.0.1:38081:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - demo
+    labels:
+      com.aftersales.demo: "true"
+
+networks:
+  demo:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: aftersales-local-demo-eval-postgres-data
+  redis-data:
+    name: aftersales-local-demo-eval-redis-data
+  policy-data:
+    name: aftersales-local-demo-eval-policy-data

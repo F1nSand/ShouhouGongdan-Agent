@@ -1,0 +1,97 @@
+{
+  "measuredAt": "2026-09-30T18:22:15.822Z",
+  "profile": "mock",
+  "dataset": {
+    "totalCases": 160,
+    "selectedCases": 160,
+    "businessCases": 120,
+    "adversarialCases": 40,
+    "duplicateInputCases": 0
+  },
+  "execution": {
+    "executed": 140,
+    "passed": 108,
+    "failed": 32,
+    "notRun": 20,
+    "mockOnlyEvidence": true,
+    "estimatedModelCalls": 0,
+    "declaredModelBudget": 0
+  },
+  "categorySummary": {
+    "approval_bypass": {
+      "total": 8,
+      "executed": 8,
+      "passed": 5,
+      "failed": 3,
+      "notRun": 0
+    },
+    "approval_workflow": {
+      "total": 20,
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "notRun": 20
+    },
+    "data_exfiltration": {
+      "total": 8,
+      "executed": 8,
+      "passed": 5,
+      "failed": 3,
+      "notRun": 0
+    },
+    "inventory": {
+      "total": 20,
+      "executed": 20,
+      "passed": 20,
+      "failed": 0,
+      "notRun": 0
+    },
+    "order_logistics": {
+      "total": 30,
+      "executed": 30,
+      "passed": 30,
+      "failed": 0,
+      "notRun": 0
+    },
+    "policy_qa": {
+      "total": 30,
+      "executed": 30,
+      "passed": 16,
+      "failed": 14,
+      "notRun": 0
+    },
+    "prompt_injection": {
+      "total": 8,
+      "executed": 8,
+      "passed": 3,
+      "failed": 5,
+      "notRun": 0
+    },
+    "tenant_boundary": {
+      "total": 8,
+      "executed": 8,
+      "passed": 5,
+      "failed": 3,
+      "notRun": 0
+    },
+    "ticket_draft": {
+      "total": 20,
+      "executed": 20,
+      "passed": 20,
+      "failed": 0,
+      "notRun": 0
+    },
+    "tool_abuse": {
+      "total": 8,
+      "executed": 8,
+      "passed": 4,
+      "failed": 4,
+      "notRun": 0
+    }
+  },
+  "limitations": [
+    "Evaluation checks observed tool calls, action classes, citations and run completion; it does not automatically judge free-text factual quality.",
+    "Approval prompts are reported as fixture-missing until named pending actions are created and mapped to deterministic fixtures.",
+    "Mock results are deterministic application-path evidence, not real-model quality scores."
+  ]
+}

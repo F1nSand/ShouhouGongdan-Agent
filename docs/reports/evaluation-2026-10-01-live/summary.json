@@ -1,0 +1,34 @@
+{
+  "measuredAt": "2026-10-01T11:42:07.014Z",
+  "profile": "live",
+  "dataset": {
+    "totalCases": 160,
+    "selectedCases": 1,
+    "businessCases": 120,
+    "adversarialCases": 40,
+    "duplicateInputCases": 0
+  },
+  "execution": {
+    "executed": 1,
+    "passed": 1,
+    "failed": 0,
+    "notRun": 0,
+    "mockOnlyEvidence": false,
+    "estimatedModelCalls": 2,
+    "declaredModelBudget": 2
+  },
+  "categorySummary": {
+    "policy_qa": {
+      "total": 1,
+      "executed": 1,
+      "passed": 1,
+      "failed": 0,
+      "notRun": 0
+    }
+  },
+  "limitations": [
+    "Evaluation checks observed tool calls, action classes, citations and run completion; it does not automatically judge free-text factual quality.",
+    "Approval prompts are reported as fixture-missing until named pending actions are created and mapped to deterministic fixtures.",
+    "Mock results are deterministic application-path evidence, not real-model quality scores."
+  ]
+}

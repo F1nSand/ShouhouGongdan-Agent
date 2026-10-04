@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DB_APP_USERNAME: ${DB_APP_USERNAME:?set DB_APP_USERNAME in .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?run scripts/New-LocalEnv.ps1}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/01-create-runtime-role.sh:/docker-entrypoint-initdb.d/01-create-runtime-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?set POSTGRES_USER in .env} -d ${POSTGRES_DB:?set POSTGRES_DB in .env}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-mock}
+      SERVER_PORT: 8081
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+      DB_APP_USERNAME: ${DB_APP_USERNAME:?set DB_APP_USERNAME in .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DB_MIGRATION_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+      DB_MIGRATION_USERNAME: ${DB_MIGRATION_USERNAME:?set DB_MIGRATION_USERNAME in .env}
+      DB_MIGRATION_PASSWORD: ${DB_MIGRATION_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      SPRING_DATA_REDIS_HOST: redis
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-v3}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_CHAT_MODEL: ${DEEPSEEK_CHAT_MODEL:-deepseek-flash}
+      SILICONFLOW_API_KEY: ${SILICONFLOW_API_KEY:-}
+      SILICONFLOW_BASE_URL: ${SILICONFLOW_BASE_URL:-https://api.siliconflow.cn}
+      SILICONFLOW_EMBEDDING_MODEL: ${SILICONFLOW_EMBEDDING_MODEL:-Qwen/Qwen3-Embedding-0.6B}
+      MODEL_REQUEST_BUDGET_ENABLED: ${MODEL_REQUEST_BUDGET_ENABLED:-true}
+      MODEL_REQUEST_BUDGET_MAX_ATTEMPTS: ${MODEL_REQUEST_BUDGET_MAX_ATTEMPTS:-50}
+      JWT_SECRET: ${JWT_SECRET:?run scripts/New-LocalEnv.ps1}
+      POLICY_STORAGE_DIR: /data/policies
+      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-true}
+      DEMO_CSR_PASSWORD: ${DEMO_CSR_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DEMO_SUPERVISOR_PASSWORD: ${DEMO_SUPERVISOR_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DEMO_WAREHOUSE_PASSWORD: ${DEMO_WAREHOUSE_PASSWORD:?run scripts/New-LocalEnv.ps1}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:?run scripts/New-LocalEnv.ps1}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8081}:8081"
+    volumes:
+      - policy-data:/data/policies
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:
+  redis-data:
+  policy-data:

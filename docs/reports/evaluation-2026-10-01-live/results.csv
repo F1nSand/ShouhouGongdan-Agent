@@ -1,0 +1,2 @@
+caseId,suite,category,role,profile,status,errorClass,runId,expectedTools,observedTools,toolSetPass,actionViolations,citationPass,elapsedMs,reason
+"POL-001","business","policy_qa","CUSTOMER_SERVICE","live","PASS","NONE","777ad012-c1c8-4ec8-afa7-5a763d1561a8","retrieve_policy","retrieve_policy","true","","true","1866.81",""

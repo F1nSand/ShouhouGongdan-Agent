@@ -1,249 +1,87 @@
-# Spring AI Alibaba Agent 示例项目
+# 智能售后工单与库存调度 Agent
 
-这是一个基于 Spring AI Alibaba Framework 构建的综合性示例项目，展示了如何构建具备多种能力的智能AI代理。项目包含Agent核心功能、MCP客户端/服务端、技能系统等模块。
+面向电商客服与仓库运营的 Java 智能助手。用户通过自然语言描述售后问题，系统关联订单和物流信息、检索售后政策、整理工单，并给出库存调度建议。退款或库存预留进入人工审批与可追踪的执行流程。
 
-## 项目概述
+## 项目状态
 
-本项目演示了以下核心能力：
-- **智能Agent构建**：基于ReAct模式的AI代理，支持工具调用和推理
-- **MCP协议支持**：Model Context Protocol客户端和服务端实现
-- **技能系统**：可扩展的技能注册和发现机制
-- **多工具集成**：天气查询、Python代码执行、PDF处理等
-- **流式响应**：支持SSE流式输出，提升用户体验
+本项目已打包为本地 Docker Desktop 演示版：Java 后端、PostgreSQL/pgvector、Redis 和 Vue 工作台共四项服务；业务数据为合成数据，DeepSeek 负责 Agent 规划，SiliconFlow 的 Qwen 向量模型负责政策检索。客服可查单、查政策和准备工单；退款经客服确认、主管审批后记入本地虚构退款账本。系统不调用支付网关，也不连接真实物流或 WMS。
 
-## 技术栈
+2026-10-01 本机验收通过：真实模型订单查询、带政策引用的问答、工单草稿和退款审批闭环；完整 160 条 mock 评估执行 140 条，108 条通过、32 条失败，20 条审批流程缺少待审批 fixture 未执行。mock 结果不是模型质量指标。详见[本机验收报告](docs/reports/2026-10-01-acceptance.md)和[执行账本](docs/plans/2026-09-30-local-docker-demo-execution-log.md)。
 
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Spring Boot | 3.5.12-SNAPSHOT | 基础框架 |
-| Spring AI Alibaba Agent Framework | 1.1.2.0 | AI代理框架 |
-| Spring AI MCP | 1.1.2 | MCP协议支持 |
-| DashScope | 最新版 | 通义千问模型 |
-| GraalVM Polyglot | 24.2.1 | Python代码执行 |
-| Java | 17+ | 编程语言 |
-| Maven | 3.6+ | 构建工具 |
+演示订单、物流、商品、退款与政策均为合成数据。退款审批会真实更新本地订单退款累计额并写入幂等账本，但不会发生资金支付；库存审批只预留虚构源仓库存，不连接真实 WMS。样例政策不是商家的真实规则。
 
-## 项目结构
+## 本机启动
 
-```
-spring-ai-alibaba-agent/
-├── spring-ai-alibaba-agent-test/          # 主测试模块
-│   ├── src/main/java/com/jcq/springaialibabaagent/
-│   │   ├── agent/                         # Agent实现
-│   │   │   ├── RealAgent.java            # 天气助手Agent示例
-│   │   │   └── resp/ResponseFormat.java  # 结构化输出
-│   │   ├── hook/                         # Agent钩子
-│   │   │   └── hitl/HumanInTheLoopTest.java  # 人机交互循环
-│   │   ├── mcp/client/                   # MCP客户端
-│   │   │   ├── McpClientController.java  # MCP测试接口
-│   │   │   └── config/                   # MCP配置
-│   │   ├── skill/                        # 技能系统
-│   │   │   └── AgentSkillTest.java       # 技能测试
-│   │   ├── tools/                        # 工具实现
-│   │   │   ├── PythonTool.java          # Python代码执行
-│   │   │   ├── PoetTool.java            # 诗歌生成
-│   │   │   ├── UserLocationTool.java    # 用户位置获取
-│   │   │   └── WeatherForLocationTool.java  # 天气查询
-│   │   └── SpringAiAlibabaAgentApplication.java
-│   └── src/main/resources/
-│       └── skills/                       # 技能定义目录
-│           └── pdf-extractor/           # PDF提取技能
-├── apring-ai-alibaba-mcp-server/         # MCP服务端模块
-│   └── src/main/java/com/jcq/server/
-│       ├── service/WeatherService.java   # 天气服务
-│       └── config/McpServerConfig.java   # MCP服务端配置
-└── pom.xml                               # 父POM
-```
+需要已启动 Docker Desktop，并使用 Linux 容器。从项目根目录的 PowerShell 运行：
 
-## 核心功能示例
+~~~powershell
+.\scripts\start.ps1
+~~~
 
-### 1. 天气助手Agent
+打开 <http://127.0.0.1:38080>。查看状态和停止服务（保留数据）：
 
-`RealAgent`展示了一个完整的天气查询Agent，具备以下特性：
-- 使用系统提示词定义Agent角色和能力
-- 集成天气查询和用户定位工具
-- 支持结构化输出（ResponseFormat）
-- 记忆功能保持对话上下文
+~~~powershell
+.\scripts\status.ps1
+.\scripts\stop.ps1
+~~~
 
-```java
-ReactAgent agent = ReactAgent.builder()
-    .name("weather_pun_agent")
-    .model(chatModel)
-    .tools(getWeatherTool, getUserLocationTool)
-    .systemPrompt(SYSTEM_PROMPT)
-    .outputType(ResponseFormat.class)
-    .saver(new MemorySaver())
-    .build();
-```
+已有本机 `.env` 时启动脚本会复用它；不要分享或提交该文件。源码变化后运行 `.\scripts\start.ps1 -Build` 更新镜像。管理员首次初始化三份合成政策才运行 `.\scripts\init-demo.ps1`；该操作会调用 Qwen 并计入每日模型额度，已初始化的环境无需重复执行。旧的 `infra/compose.yaml` 仅保留给源码开发和独立测试。
 
-### 2. MCP客户端集成
+## 验证
 
-`McpClientController`演示了如何通过MCP协议调用外部服务：
-- 自动发现和加载MCP工具
-- 流式响应处理
-- 工具调用链可视化
+| 检查 | 命令 |
+|---|---|
+| 后端集成测试 | .\mvnw.cmd -Dmaven.repo.local=.m2/repository -pl backend -am test |
+| 前端单元测试 | 在 frontend/ 目录运行 npm run test:unit |
+| 前端生产构建 | 在 frontend/ 目录运行 npm run build |
+| 浏览器流程 | 在 frontend/ 目录运行 npm run test:e2e |
 
-```java
-ReactAgent agent = ReactAgent.builder()
-    .name("ip_search")
-    .model(chatModel)
-    .toolCallbackProviders(toolCallbackProvider)
-    .build();
+浏览器端到端用例包括确定性 HTTP/SSE stub 和真实后端流程。2026-10-01 的本机真实模型与退款审批证据、mock 全量评估限制见[验收报告](docs/reports/2026-10-01-acceptance.md)。
 
-// 流式调用
-Flux<NodeOutput> stream = agent.stream("上海未来7天天气怎么样", config);
-```
+## 首期功能
 
-### 3. 技能系统
+1. 关联订单，查询物流状态并识别异常。
+2. 检索售后政策，展示版本、片段和引用。
+3. Agent 整理工单草稿，客服确认后创建与追踪工单。
+4. 查询多仓库存，按可调配量、运输时间和成本生成建议。
+5. 提交退款或调拨申请，人工审批后更新本地退款账本或预留源仓库存。
 
-`AgentSkillTest`展示了基于Markdown的技能定义和动态加载：
-- 从类路径自动发现技能
-- 技能包含完整的执行指令和错误处理
-- 支持Shell工具和Python工具的组合使用
+所有查询、工具调用、确认、审批与执行均关联 traceId 和操作记录。
 
-### 4. 自定义工具
+## 技术方案
 
-项目包含多种工具实现：
+Java 21、Spring Boot、Spring AI、Spring AI Alibaba Agent Framework、PostgreSQL + pgvector、Redis、Spring Security、Flyway、Vue 3 + TypeScript、Docker Compose。
 
-| 工具 | 功能 | 技术亮点 |
-|------|------|----------|
-| PythonTool | 执行Python代码 | GraalVM沙箱环境 |
-| PoetTool | 生成诗歌 | 固定内容返回 |
-| WeatherForLocationTool | 查询天气 | 模拟数据演示 |
-| UserLocationTool | 获取用户位置 | 上下文感知 |
+技术版本与兼容依据见 [架构与技术选型](docs/03-architecture-and-stack.md)。
 
-## 快速开始
+## 文档入口
 
-### 环境准备
+- [完整项目简介](docs/01-project-overview.md)
+- [产品需求与验收标准](docs/02-product-requirements.md)
+- [文档目录与阅读顺序](docs/README.md)
+- [开发实施计划](docs/plans/2026-09-26-aftersales-agent-implementation.md)
+- [部署与运行规范](docs/10-deployment-and-operations.md)
+- [演示与简历材料](docs/11-demo-and-resume.md)
 
-1. **Java环境**
-   ```bash
-   java -version  # 需要17或更高版本
-   ```
+## 核心流程
 
-2. **配置API Key**
-   ```bash
-   export AliQwen_API=your_dashscope_api_key
-   ```
+~~~mermaid
+flowchart LR
+    U[客服描述问题] --> A[Agent 识别需求]
+    A --> Q[订单与物流查询]
+    A --> K[政策检索]
+    Q --> R[有依据的答复]
+    K --> R
+    R --> D[生成操作草稿]
+    D --> C[用户确认]
+    C --> T[创建工单]
+    C --> P[提交敏感操作审批]
+    P --> H[主管或仓库审批]
+    H --> E[本地退款账本或库存预留]
+    T --> L[业务与审计记录]
+    E --> L
+~~~
 
-3. **安装GraalVM（可选，用于Python工具）**
-   - 下载并安装GraalVM CE 24.2.1
-   - 配置`JAVA_HOME`环境变量
+## 开发顺序
 
-### 运行项目
-
-```bash
-# 克隆项目
-git clone <repository-url>
-cd spring-ai-alibaba-agent
-
-# 编译安装
-./mvnw clean install
-
-# 运行主模块
-cd spring-ai-alibaba-agent-test
-./mvnw spring-boot:run
-```
-
-### 测试示例
-
-#### 1. 测试天气Agent
-运行 `RealAgent.main()` 方法，Agent会根据你的位置返回带冷笑话的天气预报。
-
-#### 2. 测试MCP客户端
-启动应用后访问：
-```bash
-curl http://localhost:8080/mcpTest
-```
-
-#### 3. 测试技能系统
-运行 `AgentSkillTest.main()` 方法，体验PDF提取技能。
-
-## 配置说明
-
-### application.yml
-
-```yaml
-spring:
-  application:
-    name: spring-ai-alibaba-agent
-  ai:
-    mcp:
-      client:
-        enabled: true
-        request-timeout: 30s
-        stdio:
-          servers-configuration: classpath:mcp-servers.json
-```
-
-### MCP服务端配置
-
-在 `mcp-servers.json` 中配置MCP服务端：
-
-```json
-{
-  "mcpServers": {
-    "weather": {
-      "command": "java",
-      "args": ["-jar", "weather-server.jar"]
-    }
-  }
-}
-```
-
-## 扩展开发
-
-### 添加新工具
-
-1. 实现 `BiFunction` 接口：
-
-```java
-@Component
-public class MyTool implements BiFunction<MyRequest, ToolContext, String> {
-    @Override
-    public String apply(MyRequest request, ToolContext context) {
-        // 工具逻辑
-        return result;
-    }
-}
-```
-
-2. 注册到Agent：
-
-```java
-ToolCallback myTool = FunctionToolCallback
-    .builder("myTool", new MyTool())
-    .description("工具描述")
-    .inputType(MyRequest.class)
-    .build();
-```
-
-### 添加新技能
-
-1. 在 `src/main/resources/skills/` 下创建技能目录
-2. 编写 `SKILL.md` 定义技能指令
-3. 添加必要的脚本文件
-
-### 自定义Agent
-
-```java
-ReactAgent agent = ReactAgent.builder()
-    .name("custom-agent")
-    .model(chatModel)
-    .systemPrompt("自定义系统提示词")
-    .tools(tool1, tool2)
-    .saver(new MemorySaver())
-    .enableLogging(true)
-    .build();
-```
-
-## 相关资源
-
-- [Spring AI Alibaba 官方文档](https://github.com/alibaba/spring-ai-alibaba)
-- [通义千问 API 文档](https://help.aliyun.com/document_detail/2399480.html)
-- [MCP协议规范](https://modelcontextprotocol.io/)
-- [GraalVM Polyglot文档](https://www.graalvm.org/reference-manual/polyglot-programming/)
-
-
-
-**注意**：本项目为示例性质，用于学习和演示 Spring AI Alibaba 相关功能。生产环境使用前请进行充分测试。
+先建设业务数据、身份权限和普通业务接口，再接入政策检索与 Agent，随后完成确认、审批执行、工作台及评估。每阶段有独立交付门槛，具体任务见实施计划。

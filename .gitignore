@@ -1,96 +1,42 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
-.vscode/
-
-### macOS ###
-.DS_Store
-.AppleDouble
-.LSOverride
-
-### Java ###
-*.class
-*.jar
-*.war
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-### Maven ###
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
-.mvn/wrapper/maven-wrapper.properties
-
-### AI项目相关 ###
-*.log
-*.logs
-logs/
-temp/
-tmp/
+# Local configuration and secrets
 .env
-.env.local
-.env.*.local
-
-### 敏感文件 ###
+.env.*
+!.env.example
 *.key
 *.pem
 *.p12
 *.jks
-*.crt
-*.cer
 api-key.txt
 secret.txt
 
-### 测试报告 ###
+# Build output and downloaded dependencies
+target/
+**/target/
+dist/
+**/dist/
+node_modules/
+**/node_modules/
+.m2/
+.npm-cache/
+.cache/
+
+# Local runtime data
+logs/
+*.log
+uploads/
 test-output/
 allure-results/
 extent-reports/
+frontend/test-results/
+frontend/playwright-report/
+frontend/playwright/.cache/
 
-### 缓存文件 ###
-.cache/
-*.tmp
-*.bak
-*.swp
-*~
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
 
-### 依赖下载 ###
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Maven wrapper properties are part of the project and must be tracked.
+.mvn/wrapper/maven-wrapper.jar

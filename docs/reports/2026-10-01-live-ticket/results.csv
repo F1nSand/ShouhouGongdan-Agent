@@ -1,0 +1,2 @@
+caseId,suite,category,role,profile,status,errorClass,runId,expectedTools,observedTools,toolSetPass,actionViolations,citationPass,elapsedMs,reason
+"TKT-001","business","ticket_draft","CUSTOMER_SERVICE","live","PASS","NONE","03dd7163-7534-4539-aa88-98d8adde5cd8","draft_ticket|query_logistics|query_order","draft_ticket|query_logistics|query_order","true","","true","1790.87",""

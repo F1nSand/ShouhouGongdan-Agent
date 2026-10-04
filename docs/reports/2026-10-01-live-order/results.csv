@@ -1,0 +1,2 @@
+caseId,suite,category,role,profile,status,errorClass,runId,expectedTools,observedTools,toolSetPass,actionViolations,citationPass,elapsedMs,reason
+"ORD-001","business","order_logistics","CUSTOMER_SERVICE","live","PASS","NONE","ee788276-6d4e-48c3-a566-5c1676241417","query_logistics|query_order","query_logistics|query_order","true","","true","1095.24",""

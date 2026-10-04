@@ -1,0 +1,20 @@
+{
+  "measuredAt": "2026-09-28T09:30:25.978Z",
+  "route": "Nginx -> backend -> DeepSeek -> read-only order/logistics tools",
+  "runId": "9784e8f0-b5e3-4f2d-9aa3-5c80195a4f06",
+  "requestAcceptedMs": 60.79,
+  "firstSseEventMs": 122.64,
+  "firstProgressEventMs": 1516,
+  "finalAnswerMs": 1524.68,
+  "eventTypes": [
+    "run.started",
+    "tool.started",
+    "tool.completed",
+    "tool.started",
+    "tool.completed",
+    "answer.delta",
+    "run.completed",
+    "answer.final"
+  ],
+  "externalModelRequests": 1
+}

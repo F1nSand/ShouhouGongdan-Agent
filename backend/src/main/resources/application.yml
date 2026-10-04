@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: aftersales-agent
+  autoconfigure:
+    exclude:
+      # The application uses chat and embeddings only; disable unused OpenAI modalities.
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+  profiles:
+    default: mock
+  jackson:
+    time-zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/aftercare}
+    username: ${DB_APP_USERNAME:aftercare_app}
+    password: ${DB_APP_PASSWORD:local-dev-only}
+  flyway:
+    enabled: ${DB_MIGRATIONS_ENABLED:true}
+    url: ${DB_MIGRATION_URL:${DB_URL:jdbc:postgresql://localhost:5432/aftercare}}
+    user: ${DB_MIGRATION_USERNAME:aftercare_migrator}
+    password: ${DB_MIGRATION_PASSWORD:local-dev-only}
+    locations: classpath:db/migration
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  info:
+    env:
+      enabled: false
+logging:
+  pattern:
+    level: "%5p [traceId:%X{traceId:-}]"
+app:
+  embedding:
+    dimensions: ${EMBEDDING_DIMENSIONS:1024}
+  execution:
+    core-size: 4
+    max-size: 16
+    queue-capacity: 100
+  security:
+    jwt-secret: ${JWT_SECRET}
+    jwt-issuer: aftersales-agent
+    token-validity: 30m
+  demo-seed:
+    enabled: ${DEMO_SEED_ENABLED:false}
+  refund:
+    mode: ${REFUND_MODE:simulation}
+  knowledge:
+    storage-dir: ${POLICY_STORAGE_DIR:./data/policies}
+    worker-delay: ${KNOWLEDGE_WORKER_DELAY:1000}
+  action-worker:
+    enabled: ${ACTION_WORKER_ENABLED:true}
+    delay: ${ACTION_WORKER_DELAY:1000}
+  agent:
+    recovery-enabled: ${AGENT_RECOVERY_ENABLED:true}
+  expiration-worker:
+    delay: ${EXPIRATION_WORKER_DELAY:60000}
