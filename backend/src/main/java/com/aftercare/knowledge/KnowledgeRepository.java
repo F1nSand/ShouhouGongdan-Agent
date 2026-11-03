@@ -92,16 +92,34 @@ public class KnowledgeRepository {
 
     @Transactional
     public void requeueFailedVersion(UUID tenantId, UUID versionId) {
+        var versions = jdbc.query("""
+                SELECT status FROM knowledge_versions WHERE tenant_id = ? AND id = ? FOR UPDATE
+                """, (rs, rowNum) -> rs.getString("status"), tenantId, versionId);
+        if (versions.isEmpty()) {
+            throw new IllegalArgumentException("RESOURCE_NOT_FOUND");
+        }
+        if (!"FAILED".equals(versions.getFirst())) {
+            throw new IllegalStateException("VERSION_NOT_FAILED");
+        }
+
+        int requeuedJobs = jdbc.update("""
+                UPDATE outbox_jobs SET status = 'READY', attempts = 0, available_at = now(),
+                    lease_until = NULL, lease_owner = NULL, last_error = NULL, updated_at = now()
+                WHERE tenant_id = ? AND aggregate_id = ? AND job_type = 'KNOWLEDGE_INGEST'
+                    AND status IN ('FAILED', 'DONE')
+                """, tenantId, versionId);
+        if (requeuedJobs != 1) {
+            throw new IllegalStateException("INGESTION_JOB_NOT_RETRYABLE");
+        }
+
         deleteChunks(tenantId, versionId);
-        jdbc.update("""
+        int updatedVersions = jdbc.update("""
                 UPDATE knowledge_versions SET status = 'UPLOADED', failure_reason = NULL, updated_at = now()
                 WHERE tenant_id = ? AND id = ? AND status = 'FAILED'
                 """, tenantId, versionId);
-        jdbc.update("""
-                UPDATE outbox_jobs SET status = 'READY', attempts = 0, available_at = now(),
-                    lease_until = NULL, lease_owner = NULL, last_error = NULL, updated_at = now()
-                WHERE tenant_id = ? AND aggregate_id = ? AND job_type = 'KNOWLEDGE_INGEST' AND status = 'FAILED'
-                """, tenantId, versionId);
+        if (updatedVersions != 1) {
+            throw new IllegalStateException("VERSION_NOT_FAILED");
+        }
     }
 
     public void markProcessing(UUID tenantId, UUID versionId) {

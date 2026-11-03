@@ -104,6 +104,66 @@ class KnowledgeWorkflowIT {
     }
 
     @Test
+    void retryResetsFailedVersionAndIngestionJobAndRemovesStaleChunks() {
+        var uploaded = documents.upload(admin, command("重试政策", "RETURNS",
+                Instant.parse("2024-01-01T00:00:00Z"), "retry.txt", "text/plain",
+                "可重试的售后政策内容。".getBytes(StandardCharsets.UTF_8)));
+        // Parser/embedding errors can fail the version inside ingest(), after which processOne completes the job.
+        jdbc.update("UPDATE knowledge_versions SET status = 'FAILED', failure_reason = 'INGESTION_FAILED' WHERE id = ?",
+                uploaded.versionId());
+        jdbc.update("""
+                UPDATE outbox_jobs SET status = 'DONE', attempts = 1, last_error = NULL
+                WHERE tenant_id = ? AND aggregate_id = ? AND job_type = 'KNOWLEDGE_INGEST'
+                """, tenantId, uploaded.versionId());
+        var staleEmbedding = embeddingProvider.embedDocuments(List.of("stale chunk")).getFirst();
+        jdbc.update("""
+                INSERT INTO knowledge_chunks(id, tenant_id, version_id, chunk_index, content,
+                    embedding, embedding_model)
+                VALUES (?, ?, ?, 0, 'stale chunk', CAST(? AS vector), ?)
+                """, UUID.randomUUID(), tenantId, uploaded.versionId(), vectorLiteral(staleEmbedding),
+                embeddingProvider.modelName());
+
+        var retried = documents.retry(admin, uploaded.versionId());
+
+        assertThat(retried.status()).isEqualTo("UPLOADED");
+        assertThat(retried.failureReason()).isNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM knowledge_chunks WHERE tenant_id = ? AND version_id = ?",
+                Integer.class, tenantId, uploaded.versionId())).isZero();
+        assertThat(jdbc.queryForObject("""
+                SELECT status || ':' || attempts || ':' || COALESCE(last_error, '') FROM outbox_jobs
+                WHERE tenant_id = ? AND aggregate_id = ? AND job_type = 'KNOWLEDGE_INGEST'
+                """, String.class, tenantId, uploaded.versionId())).isEqualTo("READY:0:");
+        assertThat(worker.processOne()).isTrue();
+        assertThat(documents.getVersion(admin, uploaded.versionId()).status()).isEqualTo("READY");
+    }
+
+    @Test
+    void retryRejectsNonFailedVersionsAndHidesVersionsFromOtherTenants() {
+        var uploaded = documents.upload(admin, command("重试校验", "RETURNS",
+                Instant.parse("2024-01-01T00:00:00Z"), "retry-check.txt", "text/plain",
+                "处理中的政策内容。".getBytes(StandardCharsets.UTF_8)));
+
+        assertThatThrownBy(() -> documents.retry(admin, uploaded.versionId()))
+                .isInstanceOf(ApiException.class)
+                .extracting(error -> ((ApiException) error).code()).isEqualTo("VERSION_NOT_FAILED");
+
+        jdbc.update("UPDATE knowledge_versions SET status = 'FAILED', failure_reason = 'INGESTION_FAILED' WHERE id = ?",
+                uploaded.versionId());
+        assertThatThrownBy(() -> documents.retry(staff, uploaded.versionId()))
+                .isInstanceOf(ApiException.class)
+                .extracting(error -> ((ApiException) error).code()).isEqualTo("FORBIDDEN");
+
+        UUID otherTenant = UUID.randomUUID();
+        String otherCode = "OTHER_" + otherTenant.toString().replace("-", "");
+        jdbc.update("INSERT INTO tenants(id, code, name, status) VALUES (?, ?, 'Other tenant', 'ACTIVE')",
+                otherTenant, otherCode);
+        var otherAdmin = new ActorContext(otherTenant, UUID.randomUUID(), Role.ADMIN, "knowledge-test");
+        assertThatThrownBy(() -> documents.retry(otherAdmin, uploaded.versionId()))
+                .isInstanceOf(ApiException.class)
+                .extracting(error -> ((ApiException) error).code()).isEqualTo("RESOURCE_NOT_FOUND");
+    }
+
+    @Test
     void duplicateTextUploadAndRepeatedIngestionCreateOnlyOneChunk() {
         byte[] content = "售后退货政策：支持七日内申请退货。".getBytes(StandardCharsets.UTF_8);
         var uploaded = documents.upload(admin, command("退货政策", "RETURNS",

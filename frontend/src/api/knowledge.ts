@@ -24,6 +24,7 @@ export interface PolicyChunk {
 export const knowledgeApi = {
   upload: (form: FormData) => http.upload<KnowledgeVersion>('/knowledge/documents', form),
   version: (id: string) => http.get<KnowledgeVersion>(`/knowledge/versions/${id}`),
+  retry: (id: string) => http.post<KnowledgeVersion>(`/knowledge/versions/${id}/retry`),
   publish: (id: string) => http.post<void>(`/knowledge/versions/${id}/publish`),
   search: (query: string, orderId?: string, categoryCode?: string) =>
     http.post<{ chunks: PolicyChunk[] }>('/knowledge/search', { query, orderId, categoryCode }),

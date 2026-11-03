@@ -113,6 +113,31 @@ public class DocumentService {
     }
 
     @Transactional
+    public KnowledgeVersionView retry(ActorContext actor, UUID versionId) {
+        requireAdmin(actor);
+        try {
+            repository.requeueFailedVersion(actor.tenantId(), versionId);
+        }
+        catch (IllegalArgumentException missing) {
+            if ("RESOURCE_NOT_FOUND".equals(missing.getMessage())) {
+                throw notFound();
+            }
+            throw missing;
+        }
+        catch (IllegalStateException invalid) {
+            String code = invalid.getMessage();
+            String message = "VERSION_NOT_FAILED".equals(code)
+                    ? "仅失败的知识版本可以重试" : "知识入库作业当前状态不允许重试";
+            throw new ApiException(code, message, HttpStatus.CONFLICT);
+        }
+
+        var updated = getVersion(actor, versionId);
+        return new KnowledgeVersionView(updated.documentId(), updated.versionId(), updated.title(),
+                updated.categoryCode(), updated.versionNo(), updated.status(), updated.effectiveFrom(),
+                updated.effectiveTo(), updated.failureReason(), true);
+    }
+
+    @Transactional
     public void publish(ActorContext actor, UUID versionId) {
         requireAdmin(actor);
         try {

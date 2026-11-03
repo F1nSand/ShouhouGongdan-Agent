@@ -69,6 +69,13 @@ public class KnowledgeController {
         return ApiResponse.ok(documentService.getVersion(currentActorService.currentActor(), versionId));
     }
 
+    @PostMapping("/versions/{versionId}/retry")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<KnowledgeVersionView>> retry(@PathVariable UUID versionId) {
+        var view = documentService.retry(currentActorService.currentActor(), versionId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(view));
+    }
+
     @PostMapping("/versions/{versionId}/publish")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> publish(@PathVariable UUID versionId) {
