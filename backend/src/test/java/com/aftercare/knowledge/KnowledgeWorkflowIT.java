@@ -142,6 +142,10 @@ class KnowledgeWorkflowIT {
         var uploaded = documents.upload(admin, command("重试校验", "RETURNS",
                 Instant.parse("2024-01-01T00:00:00Z"), "retry-check.txt", "text/plain",
                 "处理中的政策内容。".getBytes(StandardCharsets.UTF_8)));
+        jdbc.update("""
+                UPDATE outbox_jobs SET status = 'DONE', updated_at = now()
+                WHERE tenant_id = ? AND aggregate_id = ? AND job_type = 'KNOWLEDGE_INGEST'
+                """, tenantId, uploaded.versionId());
 
         assertThatThrownBy(() -> documents.retry(admin, uploaded.versionId()))
                 .isInstanceOf(ApiException.class)
